@@ -7,8 +7,8 @@ joblib
 sqlalchemy
 psycopg2-binary
 
-pandasai>=3.0.0b0
-pandasai-google>=0.1.2
+pandasai
+pandasai-google
 pandasai-openai
 langchain-groq
 
