@@ -1,0 +1,31 @@
+# Core Python Libraries
+pandas
+numpy
+joblib
+
+# Database and ORM
+sqlalchemy
+psycopg2-binary
+
+# Machine Learning and AI
+pandasai
+langchain-groq
+openai
+googlegenerative
+
+# Visualization
+matplotlib
+seaborn
+plotly
+
+# Web Framework
+streamlit
+
+# LLM and NLP
+transformers
+torch
+google-gemini
+
+
+# Optional but recommended
+python-dotenv
