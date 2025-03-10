@@ -10,7 +10,6 @@ psycopg2-binary
 # Machine Learning and AI
 pandasai==1.4.10
 langchain-groq
-openai
 pandasai-google
 pandasai-openai
 
