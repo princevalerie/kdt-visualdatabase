@@ -7,11 +7,10 @@ joblib
 sqlalchemy
 psycopg2-binary
 
-# Machine Learning and AI
-pandasai==1.4.2  # Sesuaikan dengan versi yang Anda tahu bekerja
-langchain-groq
-pandasai-google
+pandasai>=3.0.0b0
+pandasai-google>=0.1.2
 pandasai-openai
+langchain-groq
 
 # Visualization
 matplotlib
