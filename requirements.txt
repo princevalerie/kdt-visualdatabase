@@ -28,3 +28,4 @@ torch
 
 # Optional but recommended
 python-dotenv
+setuptools
