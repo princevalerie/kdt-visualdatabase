@@ -10,7 +10,8 @@ import plotly.graph_objs as go
 from sqlalchemy import create_engine, inspect
 from langchain_groq import ChatGroq
 from pandasai import SmartDataframe, SmartDatalake
-from pandasai.llm import OpenAI, GoogleGemini
+from pandasai_openai import OpenAI
+from pandasai_google import GoogleGemini
 from pandasai.responses.response_parser import ResponseParser
 from dotenv import load_dotenv
 
