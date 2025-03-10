@@ -8,7 +8,7 @@ sqlalchemy
 psycopg2-binary
 
 # Machine Learning and AI
-pandasai==1.4.10
+pandasai
 langchain-groq
 pandasai-google
 pandasai-openai
@@ -27,3 +27,4 @@ torch
 
 # Optional but recommended
 python-dotenv
+pipenv
