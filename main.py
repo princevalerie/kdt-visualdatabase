@@ -10,51 +10,50 @@ import plotly.graph_objs as go
 from sqlalchemy import create_engine, inspect
 from langchain_groq import ChatGroq
 from pandasai import SmartDataframe, SmartDatalake
-from pandasai_openai import OpenAI
-from pandasai_google import GoogleGemini
+from pandasai.llm import OpenAI
 from pandasai.responses.response_parser import ResponseParser
-from dotenv import load_dotenv
 
 # Fungsi untuk mencatat error ke session state
 def log_error(message):
     st.session_state.error_logs.append(message)
     st.warning(message)
 
-# ----------------------------------------------------------------------------- 
-# Custom Response Parser for Streamlit 
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
+# Custom Response Parser for Streamlit
+# -----------------------------------------------------------------------------
 class StreamlitResponse(ResponseParser):
     def __init__(self, context) -> None:
         super().__init__(context)
 
     def format_dataframe(self, result):
-        """Tampilkan dataframe dan simpan pesan placeholder ke cache.""" 
-        st.dataframe(result["value"]) 
-        st.session_state.answer_cache.append("[Displayed DataFrame]") 
+        """Tampilkan dataframe dan simpan pesan placeholder ke cache."""
+        st.dataframe(result["value"])
+        st.session_state.answer_cache.append("[Displayed DataFrame]")
         return
 
     def format_plot(self, result):
-        """Tampilkan plot dan simpan pesan placeholder ke cache.""" 
-        st.image(result["value"]) 
-        st.session_state.answer_cache.append("[Displayed Plot]") 
+        """Tampilkan plot dan simpan pesan placeholder ke cache."""
+        st.image(result["value"])
+        st.session_state.answer_cache.append("[Displayed Plot]")
         return
 
     def format_other(self, result):
-        """Tampilkan hasil lain sebagai teks dan simpan ke cache.""" 
-        st.write(str(result["value"])) 
-        st.session_state.answer_cache.append(str(result["value"])) 
+        """Tampilkan hasil lain sebagai teks dan simpan ke cache."""
+        st.write(str(result["value"]))
+        st.session_state.answer_cache.append(str(result["value"]))
         return
 
-# ----------------------------------------------------------------------------- 
-# Validate Database Connection and Load Tables 
-# ----------------------------------------------------------------------------- 
-def validate_and_connect_database(credentials, llm):
+# -----------------------------------------------------------------------------
+# Validate Database Connection and Load Tables
+# -----------------------------------------------------------------------------
+def validate_and_connect_database(credentials):
     try:
         db_user = credentials["DB_USER"]
         db_password = credentials["DB_PASSWORD"]
         db_host = credentials["DB_HOST"]
         db_port = credentials["DB_PORT"]
         db_name = credentials["DB_NAME"]
+        groq_api_key = credentials["GROQ_API_KEY"]
 
         encoded_password = db_password.replace('@', '%40')
         engine = create_engine(
@@ -62,6 +61,7 @@ def validate_and_connect_database(credentials, llm):
         )
 
         with engine.connect() as connection:
+            llm = ChatGroq(model_name="llama-3.3-70b-versatile", api_key=groq_api_key)
             inspector = inspect(engine)
             tables = inspector.get_table_names(schema="public")
             views = inspector.get_view_names(schema="public")
@@ -88,60 +88,95 @@ def validate_and_connect_database(credentials, llm):
             return datalake, table_info, engine
 
     except Exception as e:
-        log_error(f"Database connection error: {e}")
+        err_msg = f"Database connection error: {e}"
+        log_error(err_msg)
         return None, None, None
 
-# ----------------------------------------------------------------------------- 
-# Main function for Streamlit app 
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
+# Cache database tables using pickle
+# -----------------------------------------------------------------------------
+def load_database_cache(credentials, cache_path="db_cache.pkl"):
+    cache_file = Path(cache_path)
+    if cache_file.exists():
+        try:
+            with open(cache_file, "rb") as f:
+                datalake, table_info = pickle.load(f)
+            return datalake, table_info
+        except Exception as e:
+            log_error(f"Failed to load cache: {e}. Reloading data from database.")
+    datalake, table_info, engine = validate_and_connect_database(credentials)
+    if datalake is not None and table_info is not None:
+        try:
+            with open(cache_file, "wb") as f:
+                pickle.dump((datalake, table_info), f)
+        except Exception as e:
+            log_error(f"Failed to save cache: {e}")
+    return datalake, table_info
+
+# -----------------------------------------------------------------------------
+# Main function for Streamlit app
+# -----------------------------------------------------------------------------
 def main():
     st.set_page_config(page_title="AI Database Explorer", layout="wide")
     st.title("🔍 AI Database Explorer")
 
+    # Inisialisasi session state jika belum ada
     if "database_loaded" not in st.session_state:
         st.session_state.database_loaded = False
     if "answer_cache" not in st.session_state:
-        st.session_state.answer_cache = []
+        st.session_state.answer_cache = []  # Container sementara untuk cache answer
     if "error_logs" not in st.session_state:
-        st.session_state.error_logs = []
+        st.session_state.error_logs = []  # Container untuk error log
 
-    st.header("🔐 LLM Selection")
-    llm_choice = st.selectbox("Select LLM", ["GroqCloud", "OpenAI", "Google Gemini"])
-    api_key = st.text_input("API Key", type="password")
+    # Sidebar: Database credentials, status, dan error log
+    with st.sidebar:
+        st.header("🔐 Database Credentials")
+        groq_api_key = st.text_input("Groq API Key", type="password", key="groq_api_key")
 
-    if llm_choice == "GroqCloud":
-        llm = ChatGroq(model_name="llama-3.3-70b-versatile", api_key=api_key)
-    elif llm_choice == "OpenAI":
-        llm = OpenAI(api_key=api_key)
-    elif llm_choice == "Google Gemini":
-        llm = GoogleGemini(model_name="gemini-2.0-flash-thinking-exp-01-21", api_key=api_key)
+        groq_api_key = st.text_input("Groq API Key", type="password", key="groq_api_key")
+        connect_button = st.button("Connect to Database")
 
-    connect_button = st.button("Connect to Database")
-    if connect_button and all([api_key]):
+        if st.session_state.get("database_loaded", False):
+            st.subheader("📊 Loaded Tables")
+            for table, info in st.session_state.table_info.items():
+                with st.expander(table):
+                    st.write(f"Columns: {', '.join(info['columns'])}")
+                    st.write(f"Row Count: {info['row_count']}")
+
+        if st.session_state.error_logs:
+            st.subheader("⚠️ Error Log")
+            for err in st.session_state.error_logs:
+                st.error(err)
+
+    # Attempt koneksi database
+    if connect_button and groq_api_key:
+        credentials = {
+            "DB_USER": os.getenv("DB_USER"),
+            "DB_PASSWORD": os.getenv("DB_PASSWORD"),
+            "DB_HOST": os.getenv("DB_HOST"),
+            "DB_PORT": os.getenv("DB_PORT"),
+            "DB_NAME": os.getenv("DB_NAME"),
+            "GROQ_API_KEY": groq_api_key
+        }
+
         with st.spinner("Connecting to the database and loading tables..."):
-            credentials = {
-                "DB_USER": os.getenv("DB_USER"),
-                "DB_PASSWORD": os.getenv("DB_PASSWORD"),
-                "DB_HOST": os.getenv("DB_HOST"),
-                "DB_PORT": os.getenv("DB_PORT"),
-                "DB_NAME": os.getenv("DB_NAME"),
-            }
-            datalake, table_info, engine = validate_and_connect_database(credentials, llm)
+            datalake, table_info = load_database_cache(credentials)
+        if datalake and table_info:
+            st.session_state.datalake = datalake
+            st.session_state.table_info = table_info
+            st.session_state.database_loaded = True
+            # Menghapus error log setelah koneksi berhasil (opsional)
+            st.session_state.error_logs.clear()
+            st.success("Koneksi dan loading tabel selesai.")
 
-            if datalake and table_info:
-                st.session_state.datalake = datalake
-                st.session_state.table_info = table_info
-                st.session_state.database_loaded = True
-                st.session_state.error_logs.clear()
-                st.success("Koneksi dan loading tabel selesai.")
-
+    # Konten utama: Input query dan output
     if st.session_state.database_loaded:
         st.header("💬 Query Data dengan Natural Language")
         with st.form(key="query_form"):
             prompt = st.text_input("Masukkan query Anda:")
             submitted = st.form_submit_button("Submit")
             if submitted:
-                st.session_state.answer_cache.clear()
+                st.session_state.answer_cache.clear()  # Refresh output
                 with st.spinner("Generating output..."):
                     try:
                         answer = st.session_state.datalake.chat(prompt)
