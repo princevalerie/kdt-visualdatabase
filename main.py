@@ -178,9 +178,7 @@ def main():
             if submitted:
                 st.session_state.answer_cache.clear()  # Refresh output
         with st.spinner("Generating output..."):
-            if not prompt.strip().lower().startswith("select"):
-                st.error("Only SELECT queries are allowed.")
-                return
+
 
             try:
                 answer = st.session_state.datalake.chat(prompt) 
