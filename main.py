@@ -132,7 +132,8 @@ def main():
     with st.sidebar:
         st.header("🔐 Database Credentials")
 
-        groq_api_key = st.text_input("Groq API Key", type="password", key="groq_api_key")
+        groq_api_key = st.text_input("Groq API Key", type="password", key=f"groq_api_key_{st.session_state.get('database_loaded', False)}")
+
         connect_button = st.button("Connect to Database")
 
         if st.session_state.get("database_loaded", False):
