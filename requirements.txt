@@ -7,10 +7,10 @@ joblib
 sqlalchemy
 psycopg2-binary
 
+# Machine Learning and AI
 pandasai
-pandasai-google
-pandasai-openai
 langchain-groq
+openai
 
 # Visualization
 matplotlib
@@ -26,4 +26,3 @@ torch
 
 # Optional but recommended
 python-dotenv
-pipenv
