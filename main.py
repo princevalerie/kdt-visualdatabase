@@ -18,34 +18,34 @@ def log_error(message):
     st.session_state.error_logs.append(message)
     st.warning(message)
 
-# -----------------------------------------------------------------------------
-# Custom Response Parser for Streamlit
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------- 
+# Custom Response Parser for Streamlit 
+# ----------------------------------------------------------------------------- 
 class StreamlitResponse(ResponseParser):
     def __init__(self, context) -> None:
         super().__init__(context)
 
     def format_dataframe(self, result):
-        """Tampilkan dataframe dan simpan pesan placeholder ke cache."""
-        st.dataframe(result["value"])
-        st.session_state.answer_cache.append("[Displayed DataFrame]")
+        """Tampilkan dataframe dan simpan pesan placeholder ke cache.""" 
+        st.dataframe(result["value"]) 
+        st.session_state.answer_cache.append("[Displayed DataFrame]") 
         return
 
     def format_plot(self, result):
-        """Tampilkan plot dan simpan pesan placeholder ke cache."""
-        st.image(result["value"])
-        st.session_state.answer_cache.append("[Displayed Plot]")
+        """Tampilkan plot dan simpan pesan placeholder ke cache.""" 
+        st.image(result["value"]) 
+        st.session_state.answer_cache.append("[Displayed Plot]") 
         return
 
     def format_other(self, result):
-        """Tampilkan hasil lain sebagai teks dan simpan ke cache."""
-        st.write(str(result["value"]))
-        st.session_state.answer_cache.append(str(result["value"]))
+        """Tampilkan hasil lain sebagai teks dan simpan ke cache.""" 
+        st.write(str(result["value"])) 
+        st.session_state.answer_cache.append(str(result["value"])) 
         return
 
-# -----------------------------------------------------------------------------
-# Validate Database Connection and Load Tables
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------- 
+# Validate Database Connection and Load Tables 
+# ----------------------------------------------------------------------------- 
 def validate_and_connect_database(credentials):
     try:
         db_user = credentials["DB_USER"]
@@ -92,9 +92,9 @@ def validate_and_connect_database(credentials):
         log_error(err_msg)
         return None, None, None
 
-# -----------------------------------------------------------------------------
-# Cache database tables using pickle
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------- 
+# Cache database tables using pickle 
+# ----------------------------------------------------------------------------- 
 def load_database_cache(credentials, cache_path="db_cache.pkl"):
     cache_file = Path(cache_path)
     if cache_file.exists():
@@ -113,9 +113,9 @@ def load_database_cache(credentials, cache_path="db_cache.pkl"):
             log_error(f"Failed to save cache: {e}")
     return datalake, table_info
 
-# -----------------------------------------------------------------------------
-# Main function for Streamlit app
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------- 
+# Main function for Streamlit app 
+# ----------------------------------------------------------------------------- 
 def main():
     st.set_page_config(page_title="AI Database Explorer", layout="wide")
     st.title("🔍 AI Database Explorer")
@@ -131,7 +131,6 @@ def main():
     # Sidebar: Database credentials, status, dan error log
     with st.sidebar:
         st.header("🔐 Database Credentials")
-        groq_api_key = st.text_input("Groq API Key", type="password", key="groq_api_key")
 
         groq_api_key = st.text_input("Groq API Key", type="password", key="groq_api_key")
         connect_button = st.button("Connect to Database")
@@ -177,12 +176,16 @@ def main():
             submitted = st.form_submit_button("Submit")
             if submitted:
                 st.session_state.answer_cache.clear()  # Refresh output
-                with st.spinner("Generating output..."):
-                    try:
-                        answer = st.session_state.datalake.chat(prompt)
-                        st.session_state.answer_cache.append(answer)
-                    except Exception as e:
-                        st.error(f"Error processing query: {e}")
+        with st.spinner("Generating output..."):
+            if not prompt.strip().lower().startswith("select"):
+                st.error("Only SELECT queries are allowed.")
+                return
+
+            try:
+                answer = st.session_state.datalake.chat(prompt) 
+                st.session_state.answer_cache.append(answer)
+            except Exception as e:
+                st.error(f"Error processing query: {e}")
 
         if st.session_state.answer_cache:
             st.subheader("Output")
