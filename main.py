@@ -133,6 +133,8 @@ def main():
         st.header("🔐 Database Credentials")
 
         groq_api_key = st.text_input("Groq API Key", type="password", key=f"groq_api_key_{st.session_state.get('database_loaded', False)}")
+        st.markdown("[Get API Key here](https://console.groq.com/keys)")
+
 
         connect_button = st.button("Connect to Database")
 
